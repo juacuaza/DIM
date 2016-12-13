@@ -28,24 +28,24 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.label1 = new System.Windows.Forms.Label();
+            this.LBL_Texto = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
-            // label1
+            // LBL_Texto
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 32);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(35, 13);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "label1";
+            this.LBL_Texto.AutoSize = true;
+            this.LBL_Texto.Location = new System.Drawing.Point(12, 32);
+            this.LBL_Texto.Name = "LBL_Texto";
+            this.LBL_Texto.Size = new System.Drawing.Size(16, 13);
+            this.LBL_Texto.TabIndex = 0;
+            this.LBL_Texto.Text = "---";
             // 
             // App
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(292, 82);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.LBL_Texto);
             this.Name = "App";
             this.Text = "App";
             this.Load += new System.EventHandler(this.Form1_Load);
@@ -56,6 +56,6 @@
 
         #endregion
 
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label LBL_Texto;
     }
 }
