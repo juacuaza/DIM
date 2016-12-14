@@ -47,17 +47,18 @@ namespace Kinect
         /// <param name="e"></param>
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            foreach (var potentialSensor in KinectSensor.KinectSensors)
-            {
-                if (potentialSensor.Status == KinectStatus.Connected)
-                {
-                    this.sensor = potentialSensor;
-                    break;
-                }
-            }
-
             try
             {
+
+                foreach (var potentialSensor in KinectSensor.KinectSensors)
+                {
+                    if (potentialSensor.Status == KinectStatus.Connected)
+                    {
+                        this.sensor = potentialSensor;
+                        break;
+                    }
+                }
+
                 if (this.sensor != null)
                 {
                     this.sensor.ColorStream.Enable(ColorImageFormat.RgbResolution640x480Fps30);
@@ -98,7 +99,8 @@ namespace Kinect
                 {
                     this.sensor = null;
                 }
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 LBL_Info.Content = ex.Message;
             }
