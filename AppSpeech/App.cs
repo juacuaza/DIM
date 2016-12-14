@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Speech.Recognition;
 using System.Speech.Synthesis;
+using System.Diagnostics;
 
 namespace AppSpeech
 {
@@ -22,6 +23,8 @@ namespace AppSpeech
         public App()
         {
             InitializeComponent();
+            this.WMP.Visible = false;
+
         }
 
         #endregion
@@ -107,11 +110,30 @@ namespace AppSpeech
                             this.LBL_Texto.Text = "Alarma quitada";
                             Update();
                             synth.Speak(this.LBL_Texto.Text);
+                            WMP.Ctlcontrols.stop();
+                            PictureBox.Visible = false;
+                            this.Size = new Size(349, 163);
                         }
                         
                     }
                     break;
 
+                case "video":
+                case "musica":
+                case "navegador":
+                    if (rawText.ToLower().Contains("abrir") || rawText.ToLower().Contains("poner"))
+                    {
+                        abrirAplicacion(strOpcion.Text.ToLower());
+                        this.LBL_Texto.Text = rawText;
+                        synth.Speak(rawText);
+                    }
+                    else if (rawText.ToLower().Contains("cerrar") || rawText.ToLower().Contains("quitar"))
+                    {
+                        cerrarAplicacion(strOpcion.Text.ToLower());
+                        this.LBL_Texto.Text = rawText;
+                        synth.Speak(rawText);
+                    }
+                        break;
                 default:
                     this.LBL_Texto.Text = "No info provided.";
                     break;
@@ -145,22 +167,92 @@ namespace AppSpeech
             {
                 this.LBL_Texto.Text = iSegundos.ToString();
             }
-            else
+            else if(iSegundos == -1)
             {
-                if (this.BackColor == Color.FromArgb(255, 240, 240, 240))
-                {
-                    this.BackColor = Color.Red;
-                    this.LBL_Texto.Text = "ALARMA";
-                }
-                else
-                {
-                    this.BackColor = Color.FromArgb(255, 240, 240, 240);
-                    this.LBL_Texto.Text = "";
-                }
-                //falta poner audio con alarma
+                WMP.URL = @"Resource\Alarma.mp3";
+                WMP.Ctlcontrols.play();
+                this.Size = new Size(318, 316);
+                PictureBox.Image = Image.FromFile(@"Resource\Alarma.gif");
             }
-                //timer.Stop();
             
+        }
+
+        private void abrirAplicacion(string strOpcion)
+        {
+            
+            switch(strOpcion)
+            {
+                case "video":
+                    //string filePath = System.Reflection.Assembly.GetExecutingAssembly().Location + "\\Resource\\Video.mp4";
+                    this.Size = new Size(318, 316);
+                    WMP.Visible = true;
+                    WMP.URL = @"Resource\Video.mp4";
+                    WMP.Ctlcontrols.play();                
+                    //Player = new WindowsMediaPlayer();                    
+                    //Player.URL = @"Resource\Video.mp4";
+                    //Player.controls.play();
+                    break;
+                case "musica":
+                    this.Size = new Size(318, 316);
+                    WMP.Visible = true;
+                    WMP.URL = @"Resource\Audio.mp3";
+                    WMP.Ctlcontrols.play();
+                    //Player = new WindowsMediaPlayer();
+                    //Player.URL = @"Resource\Audio.mp3";
+                    //Player.controls.play();
+                    break;
+                case "navegador":
+                    Process myProcess = new Process();
+                    try
+                    {
+                        // true is the default, but it is important not to set it to false
+                        myProcess.StartInfo.UseShellExecute = true;
+                        myProcess.StartInfo.FileName = "http://www.google.es";
+                        myProcess.Start();                                                
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    break;
+            }
+        }
+
+        private void cerrarAplicacion(string strOpcion)
+        {
+            switch(strOpcion)
+            {
+                case "video":
+                    if (WMP != null)
+                    {
+                        WMP.Ctlcontrols.stop();
+                        WMP.Visible = false;
+                        this.Size = new Size(349,163);
+                    }
+                    break;
+                case "musica":
+                    if (WMP != null)
+                    {
+                        WMP.Ctlcontrols.stop();
+                        WMP.Visible = false;
+                        this.Size = new Size(349, 163);
+                    }
+                    break;
+                case "navegador":
+                    try
+                    {
+                        foreach(Process proc in Process.GetProcesses())
+                        {
+                            if (proc.ProcessName == "MicrosoftEdge" || proc.ProcessName == "iexplore")
+                                proc.Kill();
+                        }                        
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message);
+                    }
+                    break;
+            }
         }
 
         /// <summary>
@@ -178,7 +270,10 @@ namespace AppSpeech
             GrammarBuilder fondo = "Fondo";
             GrammarBuilder tam = "Tamaño";
             GrammarBuilder quitar = "Quitar";
-
+            GrammarBuilder abrir = "Abrir";
+            GrammarBuilder buscar = "Buscar";
+            GrammarBuilder cerrar = "Cerrar";
+                
 
             //Regla 0 "Salir"
             Choices cerrarChoices = CreateChoiceSalir();
@@ -188,6 +283,9 @@ namespace AppSpeech
 
             //Regla 2 "Poner alarma"
             Choices alarmaChoice = CreateChoicesAlarma();
+
+            //Regla 3 "Abrir Aplicacion"
+            Choices appChoice = CreateChoicesAplicacion();
 
             ///se crean el choice de los colores
             Choices colorChoice = CreateChoiceColor();
@@ -212,15 +310,21 @@ namespace AppSpeech
             //crea Grammar de la alarma
             GrammarBuilder galarma = CreateGrammarKey("alarma", alarmaChoice);
 
+            //Crea Grammar de aplicaciones
+            GrammarBuilder gApp = CreateGrammarKey("app", appChoice);
+
 
             Choices cnombre = new Choices(comoTe);
             GrammarBuilder fNombre = new GrammarBuilder(cnombre);
             fNombre.Append(gNombre);
 
-
             Choices calarma = new Choices(poner, quitar);
             GrammarBuilder fPalarma = new GrammarBuilder(calarma);
             fPalarma.Append(galarma);
+
+            Choices capp = new Choices(abrir, poner, cerrar, quitar);
+            GrammarBuilder fapp = new GrammarBuilder(capp);
+            fapp.Append(gApp);
 
             Choices PoCa = new Choices(poner, cambiar);
             GrammarBuilder frase1 = new GrammarBuilder(PoCa);
@@ -234,7 +338,7 @@ namespace AppSpeech
             frase1.Append(frase3);
 
 
-            Choices cFinal = new Choices(fNombre, frase1, gSalir, fPalarma);
+            Choices cFinal = new Choices(fNombre, frase1, gSalir, fPalarma, fapp);
             GrammarBuilder fFinal = new GrammarBuilder(cFinal);
 
             try
@@ -275,7 +379,7 @@ namespace AppSpeech
         {
             Choices Choice = new Choices();
 
-            SemanticResultValue choiceResultValue = new SemanticResultValue("Alarma", 30);
+            SemanticResultValue choiceResultValue = new SemanticResultValue("Alarma", 10);
             GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
             Choice.Add(resultValueBuilder);
 
@@ -330,6 +434,29 @@ namespace AppSpeech
 
             SemanticResultValue choiceResultValue = new SemanticResultValue("LLamas", "DIMA");
             GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+            Choice.Add(resultValueBuilder);
+
+            return Choice;
+        }
+
+        /// <summary>
+        /// Crea el Choice de las aplicaciones
+        /// </summary>
+        /// <returns></returns>
+        private Choices CreateChoicesAplicacion()
+        {
+            Choices Choice = new Choices();
+
+            SemanticResultValue choiceResultValue = new SemanticResultValue("Musica", "Cancion");
+            GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+            Choice.Add(resultValueBuilder);
+
+            choiceResultValue = new SemanticResultValue("Video", "Audio");
+            resultValueBuilder = new GrammarBuilder(choiceResultValue);
+            Choice.Add(resultValueBuilder);
+
+            choiceResultValue = new SemanticResultValue("Navegador", "Internet");
+            resultValueBuilder = new GrammarBuilder(choiceResultValue);
             Choice.Add(resultValueBuilder);
 
             return Choice;
