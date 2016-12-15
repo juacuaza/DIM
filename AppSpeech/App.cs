@@ -253,7 +253,7 @@ namespace AppSpeech
             }
             else if(iSegundos == -1)
             {
-                WMP.URL = @"Resource\Alarma.mp3";
+                WMP.URL = @"Resource\Despertador.mp3";
                 WMP.Ctlcontrols.play();
                 //PB_Alarma.Image = Resources.Alarma;
                 PB_Alarma.Visible = true;
