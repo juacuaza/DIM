@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using System.Speech.Recognition;
 using System.Speech.Synthesis;
 using System.Diagnostics;
+using global::AppSpeech.Properties;
 
 namespace AppSpeech
 {
@@ -15,6 +16,7 @@ namespace AppSpeech
         private SpeechSynthesizer synth = new SpeechSynthesizer();
         private Timer timer;
         private int iSegundos;
+        private bool Bloqueo;
 
         #endregion
 
@@ -24,7 +26,9 @@ namespace AppSpeech
         {
             InitializeComponent();
             this.WMP.Visible = false;
-
+            this.LBL_Hora.Visible = false;
+            this.PB_Alarma.Visible = false;
+            Browser.Visible = false;            
         }
 
         #endregion
@@ -44,7 +48,8 @@ namespace AppSpeech
             _recognizer.SpeechRecognized += new EventHandler<SpeechRecognizedEventArgs>(_recognizer_SpeechRecognized);
             //reconocimiento asíncrono y múltiples veces
             _recognizer.RecognizeAsync(RecognizeMode.Multiple);
-            synth.Speak("Aplicación preparada para reconocer su voz");
+            synth.Speak("Aplicación preparada para reconocer su voz");            
+            this.BackgroundImage = Resources.bloqueo; 
         }
 
 
@@ -60,84 +65,163 @@ namespace AppSpeech
             string rawText = e.Result.Text;
             RecognitionResult result = e.Result;
 
-            switch (strOpcion.Text.ToLower())
+            if (strOpcion.Text.ToLower().Contains("desbloquear") || (strOpcion.Text.ToLower().Contains("bloquear")))
             {
-                case "verde":
-                case "azul":
-                case "rojo":
-                    this.LBL_Texto.Text = rawText;
-                    this.BackColor = Color.FromArgb((int)semantics["rgb"].Value);
-                    Update();
-                    synth.Speak(rawText);
-                    break;
+                Bloqueo = (bool)semantics["bloq"].Value;
+            }
 
-                case "letra":
-                    float currentSize = this.LBL_Texto.Font.Size;
-                    currentSize += 2.0F;
-                    this.LBL_Texto.Font = new Font(this.LBL_Texto.Font.Name, currentSize, this.LBL_Texto.Font.Style, LBL_Texto.Font.Unit);
-                    this.LBL_Texto.Text = rawText;
-                    Update();
-                    synth.Speak(rawText);
-                    break;
+            if (Bloqueo)
+            {                
+                switch (strOpcion.Text.ToLower())
+                {
+                    case "desbloquear":
+                        synth.Speak("Telefono desbloqueado");
+                        this.LBL_Texto.Text = "Telefono desbloqueado";
+                        this.BackgroundImage = Resources.principal;
+                        Update();
+                        break;
 
-                case "llamas":
-                    this.LBL_Texto.Text = "Mi nombre es " + semantics["llamas"].Value;
-                    Update();
-                    synth.Speak("Mi nombre es " + semantics["llamas"].Value);
-                    break;
+                    case "llamas":
+                        this.LBL_Texto.Text = "Mi nombre es " + semantics["llamas"].Value;
+                        Update();
+                        synth.Speak("Mi nombre es " + semantics["llamas"].Value);
+                        break;
 
-                case "salir":
+                    case "salir":
+                        this.LBL_Texto.Text = semantics["salir"].Value.ToString();
+                        Update();
+                        synth.Speak("Hasta la próxima");
+                        this.Close();
+                        break;
+
+                    case "alarma":
+                        if (rawText.ToLower().Contains("poner"))
+                        {
+                            //this.LBL_Texto.Text = "La alarma sonará en " + semantics["alarma"].Value.ToString() + " segundos";
+                            this.BackgroundImage = Resources.reloj;
+                            this.LBL_Texto.Text = rawText;
+                            Update();
+                            synth.Speak("La alarma sonará en " + semantics["alarma"].Value.ToString() + " segundos");
+                            PonerAlarma((int)semantics["alarma"].Value);
+                        }
+                        else if (rawText.ToLower().Contains("quitar"))
+                        {
+                            if (this.timer != null)
+                            {
+                                this.timer.Stop();
+                                this.BackgroundImage = Resources.principal;                                
+                                this.LBL_Texto.Text = rawText;
+                                Update();
+                                synth.Speak("Alarma quitada");
+                                WMP.Ctlcontrols.stop();
+                                PB_Alarma.Visible = false;                                
+                            }
+
+                        }
+                        break;
+
+                    case "video":
+                    case "musica":
+                    /*case "navegador":*/
+                        if (rawText.ToLower().Contains("abrir") || rawText.ToLower().Contains("poner"))
+                        {
+                            abrirAplicacion(strOpcion.Text.ToLower());
+                            this.LBL_Texto.Text = rawText;
+                            synth.Speak(rawText);
+                        }
+                        else if (rawText.ToLower().Contains("cerrar") || rawText.ToLower().Contains("quitar"))
+                        {
+                            cerrarAplicacion(strOpcion.Text.ToLower());
+                            this.LBL_Texto.Text = rawText;
+                            synth.Speak(rawText);
+                        }
+                        break;
+
+                    case "tiempo":
+                        if (rawText.ToLower().Contains("abrir"))
+                        {
+                            this.BackgroundImage = Resources.tiempo;                            
+                            synth.Speak("El tiempo estara nublado, abrigate");
+                            this.LBL_Texto.Text = rawText;
+                            Update();
+                        }
+                        else if(rawText.ToLower().Contains("cerrar"))
+                        {
+                            this.BackgroundImage = Resources.principal;                            
+                            synth.Speak("Cerrando tiempo");
+                            this.LBL_Texto.Text = rawText;
+                            Update();
+                        }
+                        break;
+
+
+                    case "reloj":
+                        if (rawText.ToLower().Contains("abrir"))
+                        {
+                            this.BackgroundImage = Resources.reloj;
+                            this.LBL_Hora.Visible = true;          
+                            this.LBL_Hora.Text = DateTime.Now.ToString("HH:MM");
+                            this.LBL_Texto.Text = rawText;
+                            Update();
+                            synth.Speak("son las " + this.LBL_Hora.Text);                            
+                        }
+                        else if (rawText.ToLower().Contains("cerrar"))
+                        {
+                            this.BackgroundImage = Resources.principal;
+                            this.LBL_Hora.Visible = false;                            
+                            this.LBL_Texto.Text = rawText;
+                            Update();
+                            synth.Speak("Cerrando reloj");                            
+                        }
+                        break;
+
+                    case "viajes":
+                    case "coches":
+                    case "noticias":
+                        if (rawText.ToLower().Contains("buscar"))
+                        {
+                            this.LBL_Texto.Text = rawText;
+                            Browser.Visible = true;
+                            synth.Speak("Buscando "+ strOpcion.Text);                            
+                            AbrirBusqueda(semantics["busqueda"].Value.ToString());
+                            Update();
+                        }
+                        else if (rawText.ToLower().Contains("cerrar"))
+                        {
+                            this.LBL_Texto.Text = rawText;
+                            synth.Speak("cerrando navegador");
+                            Browser.Visible = false;
+                            Update();                            
+                        }
+
+                        break;
+
+                    default:
+                        this.LBL_Texto.Text = "No info provided.";
+                        break;
+                }
+            }
+            else
+            {
+                if (strOpcion.Text.ToLower().Contains("bloquear"))
+                {
+                    synth.Speak("Telefono bloqueado");
+                    this.LBL_Texto.Text = "Telefono bloqueado";
+                    this.BackgroundImage = Resources.bloqueo;
+                    Update();
+                }
+                else if (strOpcion.Text.ToLower().Contains("salir"))
+                {
                     this.LBL_Texto.Text = semantics["salir"].Value.ToString();
                     Update();
                     synth.Speak("Hasta la próxima");
                     this.Close();
-                    break;
-
-                case "alarma":
-                    if (rawText.ToLower().Contains("poner"))
-                    {
-                        this.LBL_Texto.Text = "La alarma sonará en " + semantics["alarma"].Value.ToString() + " segundos";
-                        Update();
-                        synth.Speak(this.LBL_Texto.Text);
-                        PonerAlarma((int)semantics["alarma"].Value);
-                    }
-                    else if(rawText.ToLower().Contains("quitar"))
-                    {                        
-                        if (this.timer != null)
-                        {
-                            this.timer.Stop();
-                            this.BackColor = Color.FromArgb(255, 240, 240, 240);
-                            this.LBL_Texto.Text = "Alarma quitada";
-                            Update();
-                            synth.Speak(this.LBL_Texto.Text);
-                            WMP.Ctlcontrols.stop();
-                            PictureBox.Visible = false;
-                            this.Size = new Size(349, 163);
-                        }
-                        
-                    }
-                    break;
-
-                case "video":
-                case "musica":
-                case "navegador":
-                    if (rawText.ToLower().Contains("abrir") || rawText.ToLower().Contains("poner"))
-                    {
-                        abrirAplicacion(strOpcion.Text.ToLower());
-                        this.LBL_Texto.Text = rawText;
-                        synth.Speak(rawText);
-                    }
-                    else if (rawText.ToLower().Contains("cerrar") || rawText.ToLower().Contains("quitar"))
-                    {
-                        cerrarAplicacion(strOpcion.Text.ToLower());
-                        this.LBL_Texto.Text = rawText;
-                        synth.Speak(rawText);
-                    }
-                        break;
-                default:
-                    this.LBL_Texto.Text = "No info provided.";
-                    break;
-
+                }
+                else
+                {
+                    synth.Speak("Tienes que desbloquear el telefono");
+                    this.LBL_Texto.Text = "Tienes que desbloquear el telefono";
+                }
             }
         }
 
@@ -171,88 +255,102 @@ namespace AppSpeech
             {
                 WMP.URL = @"Resource\Alarma.mp3";
                 WMP.Ctlcontrols.play();
-                this.Size = new Size(318, 316);
-                PictureBox.Image = Image.FromFile(@"Resource\Alarma.gif");
+                //PB_Alarma.Image = Resources.Alarma;
+                PB_Alarma.Visible = true;
             }
             
         }
 
         private void abrirAplicacion(string strOpcion)
         {
-            
-            switch(strOpcion)
+            try
             {
-                case "video":
-                    //string filePath = System.Reflection.Assembly.GetExecutingAssembly().Location + "\\Resource\\Video.mp4";
-                    this.Size = new Size(318, 316);
-                    WMP.Visible = true;
-                    WMP.URL = @"Resource\Video.mp4";
-                    WMP.Ctlcontrols.play();                
-                    //Player = new WindowsMediaPlayer();                    
-                    //Player.URL = @"Resource\Video.mp4";
-                    //Player.controls.play();
-                    break;
-                case "musica":
-                    this.Size = new Size(318, 316);
-                    WMP.Visible = true;
-                    WMP.URL = @"Resource\Audio.mp3";
-                    WMP.Ctlcontrols.play();
-                    //Player = new WindowsMediaPlayer();
-                    //Player.URL = @"Resource\Audio.mp3";
-                    //Player.controls.play();
-                    break;
-                case "navegador":
-                    Process myProcess = new Process();
-                    try
-                    {
-                        // true is the default, but it is important not to set it to false
-                        myProcess.StartInfo.UseShellExecute = true;
-                        myProcess.StartInfo.FileName = "http://www.google.es";
-                        myProcess.Start();                                                
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                    break;
+                switch (strOpcion)
+                {
+                    case "video":
+                        WMP.Visible = true;
+                        WMP.Location = new Point(12, 20);
+                        WMP.URL = @"Resource\Documental.mp4";
+                        WMP.Ctlcontrols.play();
+                        break;
+                    case "musica":
+                        WMP.Visible = true;
+                        WMP.Location = new Point(12, 20);
+                        WMP.URL = @"Resource\Cancion.mp3";
+                        WMP.Ctlcontrols.play();
+                        break;
+                    case "navegador":
+                        //Process myProcess = new Process();
+                        //try
+                        //{
+                        //    // true is the default, but it is important not to set it to false
+                        //    myProcess.StartInfo.UseShellExecute = true;
+                        //    myProcess.StartInfo.FileName = "http://www.google.es";
+                        //    myProcess.Start();
+                        //}
+                        //catch (Exception e)
+                        //{
+                        //    Console.WriteLine(e.Message);
+                        //}
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                this.LBL_Texto.Text = e.Message;
             }
         }
 
         private void cerrarAplicacion(string strOpcion)
         {
-            switch(strOpcion)
+            try
             {
-                case "video":
-                    if (WMP != null)
-                    {
-                        WMP.Ctlcontrols.stop();
-                        WMP.Visible = false;
-                        this.Size = new Size(349,163);
-                    }
-                    break;
-                case "musica":
-                    if (WMP != null)
-                    {
-                        WMP.Ctlcontrols.stop();
-                        WMP.Visible = false;
-                        this.Size = new Size(349, 163);
-                    }
-                    break;
-                case "navegador":
-                    try
-                    {
-                        foreach(Process proc in Process.GetProcesses())
+                switch (strOpcion)
+                {
+                    case "video":
+                        if (WMP != null)
                         {
-                            if (proc.ProcessName == "MicrosoftEdge" || proc.ProcessName == "iexplore")
-                                proc.Kill();
-                        }                        
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show(ex.Message);
-                    }
-                    break;
+                            WMP.Ctlcontrols.stop();
+                            WMP.Visible = false;
+                        }
+                        break;
+                    case "musica":
+                        if (WMP != null)
+                        {
+                            WMP.Ctlcontrols.stop();
+                            WMP.Visible = false;
+                        }
+                        break;
+                    case "navegador":
+                        //try
+                        //{
+                        //    foreach (Process proc in Process.GetProcesses())
+                        //    {
+                        //        if (proc.ProcessName == "MicrosoftEdge" || proc.ProcessName == "iexplore")
+                        //            proc.Kill();
+                        //    }
+                        //}
+                        //catch (Exception ex)
+                        //{
+                        //    this.LBL_Texto.Text = ex.Message;
+                        //}
+                        break;
+                }
             }
+            catch(Exception e)
+            {
+                this.LBL_Texto.Text = e.Message;
+            }
+        }
+
+        
+        private void AbrirBusqueda(string strBusqueda)
+        {
+            Browser.ScriptErrorsSuppressed = true;
+            Browser.Navigate(strBusqueda,
+                          null,
+                          null,
+                          "User-Agent:Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19");
         }
 
         /// <summary>
@@ -264,88 +362,80 @@ namespace AppSpeech
         {
             synth.Speak("Creando ahora la gramática");
 
+            ///Palabra inicial
+            GrammarBuilder oyedima = "Oye DIMA";
             GrammarBuilder comoTe= "Como te";
             GrammarBuilder poner = "Poner";
-            GrammarBuilder cambiar = "Cambiar";
-            GrammarBuilder fondo = "Fondo";
-            GrammarBuilder tam = "Tamaño";
             GrammarBuilder quitar = "Quitar";
             GrammarBuilder abrir = "Abrir";
-            GrammarBuilder buscar = "Buscar";
             GrammarBuilder cerrar = "Cerrar";
-                
-
-            //Regla 0 "Salir"
+            GrammarBuilder buscar = "Buscar";                 
+            
+            //Choices con la palabra final
             Choices cerrarChoices = CreateChoiceSalir();
-
-            //Regla 1 "¿Como te llamas?"
             Choices nombreChoice = CreateChoicesNombre();
-
-            //Regla 2 "Poner alarma"
             Choices alarmaChoice = CreateChoicesAlarma();
-
-            //Regla 3 "Abrir Aplicacion"
             Choices appChoice = CreateChoicesAplicacion();
+            Choices bloqueoChoice = CreateChoicesBloque();
+            Choices tiempoChoice = CreateChoiceTiempo();
+            Choices relojChoice = CreateChoicesReloj();
+            Choices buscarChoice = CreateChoiceBuscar();
 
-            ///se crean el choice de los colores
-            Choices colorChoice = CreateChoiceColor();
-
-            ///Se crea el choice de el tamaño letra
-            Choices letraChoice = CreateChoiceLetra();
-
-
-
-            ///Crea grammar de colores            
-            GrammarBuilder gColores = CreateGrammarKey("rgb", colorChoice);
-
-            ///Crea el grammar de letra            
-            GrammarBuilder tLetra = CreateGrammarKey("letra", letraChoice);
-
-            ///Crear el grammar de salir
+            //Grammar con las key
             GrammarBuilder gSalir = CreateGrammarKey("salir", cerrarChoices);
-
-            ///Crea grammar del nombre 
             GrammarBuilder gNombre = CreateGrammarKey("llamas", nombreChoice);
-
-            //crea Grammar de la alarma
             GrammarBuilder galarma = CreateGrammarKey("alarma", alarmaChoice);
-
-            //Crea Grammar de aplicaciones
             GrammarBuilder gApp = CreateGrammarKey("app", appChoice);
+            GrammarBuilder gBloqueo = CreateGrammarKey("bloq", bloqueoChoice);
+            GrammarBuilder gTiempo = CreateGrammarKey("temp", tiempoChoice);
+            GrammarBuilder gReloj = CreateGrammarKey("time", relojChoice);
+            GrammarBuilder gBuscar = CreateGrammarKey("busqueda", buscarChoice);
 
+            //Prefijo de la frase
+            Choices cOyedima = new Choices(oyedima);
 
+            //Frase nombre
             Choices cnombre = new Choices(comoTe);
             GrammarBuilder fNombre = new GrammarBuilder(cnombre);
             fNombre.Append(gNombre);
 
+            //frase alarma
             Choices calarma = new Choices(poner, quitar);
             GrammarBuilder fPalarma = new GrammarBuilder(calarma);
             fPalarma.Append(galarma);
 
+            //frase aplicacion 
             Choices capp = new Choices(abrir, poner, cerrar, quitar);
             GrammarBuilder fapp = new GrammarBuilder(capp);
             fapp.Append(gApp);
 
-            Choices PoCa = new Choices(poner, cambiar);
-            GrammarBuilder frase1 = new GrammarBuilder(PoCa);
+            //frase bloqueo
+            GrammarBuilder fbloqueo = new GrammarBuilder(cOyedima);
+            fbloqueo.Append(gBloqueo);
 
-            Choices FoTa = new Choices(fondo, tam);
-            GrammarBuilder frase2 = new GrammarBuilder(FoTa);
+            //frase tiempo
+            Choices ctiempoAbrir = new Choices(abrir, cerrar);
+            GrammarBuilder ftiempo = new GrammarBuilder(ctiempoAbrir);            
+            ftiempo.Append(gTiempo);
 
-            frase1.Append(frase2);
-            Choices col_tam = new Choices(gColores, tLetra);
-            GrammarBuilder frase3 = new GrammarBuilder(col_tam);
-            frase1.Append(frase3);
+            //frase hora            
+            Choices creloj = new Choices(abrir, cerrar);
+            GrammarBuilder freloj = new GrammarBuilder(creloj);            
+            freloj.Append(gReloj);
 
+            Choices cbuscar = new Choices(buscar, cerrar);
+            GrammarBuilder fbuscar = new GrammarBuilder(cbuscar);
+            fbuscar.Append(gBuscar);
 
-            Choices cFinal = new Choices(fNombre, frase1, gSalir, fPalarma, fapp);
+            //Frase final
+            Choices cFinal = new Choices(fNombre, gSalir, fPalarma, fapp, fbloqueo, ftiempo, freloj, fbuscar);
             GrammarBuilder fFinal = new GrammarBuilder(cFinal);
 
             try
             {
                 //Grammar grammar = new Grammar(frase1);
                 Grammar grammar = new Grammar(fFinal);
-                grammar.Name = "Poner/Cambiar Fondo/Tamaño";
+                grammar.Name = "Oye DIMA/Poner";
                 return grammar;
             }
             catch (Exception ex)
@@ -353,7 +443,30 @@ namespace AppSpeech
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK);
                 return null;
             }
-        }        
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        private Choices CreateChoiceBuscar()
+        {
+            Choices Choice = new Choices();
+
+            SemanticResultValue choiceResultValue = new SemanticResultValue("Viajes", "https://www.kayak.es/flights");
+            GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+            Choice.Add(resultValueBuilder);
+
+            choiceResultValue = new SemanticResultValue("Coches", "http://www.motorpasion.com");
+            resultValueBuilder = new GrammarBuilder(choiceResultValue);
+            Choice.Add(resultValueBuilder);
+
+            choiceResultValue = new SemanticResultValue("Noticias", "http://www.20minutos.es");
+            resultValueBuilder = new GrammarBuilder(choiceResultValue);
+            Choice.Add(resultValueBuilder);
+
+            return Choice;
+        }
 
         /// <summary>
         /// 
@@ -387,22 +500,32 @@ namespace AppSpeech
         }
 
         /// <summary>
-        /// crea los choices de los colores
+        /// Crea el Choice del tiempo
         /// </summary>
-        /// <returns>ColorChoices</returns>
-        private Choices CreateChoiceColor()
+        /// <returns>Choice del tiempo</returns>
+        private Choices CreateChoiceTiempo()
         {
             Choices Choice = new Choices();
 
-            SemanticResultValue choiceResultValue = new SemanticResultValue("Rojo", Color.FromName("Red").ToArgb());
+            SemanticResultValue choiceResultValue = new SemanticResultValue("Tiempo", "Tiempo");
             GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
             Choice.Add(resultValueBuilder);
 
-            choiceResultValue = new SemanticResultValue("Azul", Color.FromName("Blue").ToArgb());
-            resultValueBuilder = new GrammarBuilder(choiceResultValue);
-            Choice.Add(resultValueBuilder);
+            return Choice;
+        }
 
-            choiceResultValue = new SemanticResultValue("Verde", Color.FromName("Green").ToArgb());
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        private Choices CreateChoicesBloque()
+        {
+            Choices Choice = new Choices();
+
+            SemanticResultValue choiceResultValue = new SemanticResultValue("bloquear", false);
+            GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
+            Choice.Add(resultValueBuilder);
+            choiceResultValue = new SemanticResultValue("desbloquear", true);
             resultValueBuilder = new GrammarBuilder(choiceResultValue);
             Choice.Add(resultValueBuilder);
 
@@ -410,14 +533,14 @@ namespace AppSpeech
         }
 
         /// <summary>
-        /// Crea el choice del tamaño letra
+        /// 
         /// </summary>
-        /// <returns>Choice Tamaño letra</returns>
-        private Choices CreateChoiceLetra()
+        /// <returns></returns>
+        private Choices CreateChoicesReloj()
         {
             Choices Choice = new Choices();
 
-            SemanticResultValue choiceResultValue = new SemanticResultValue("Letra", this.LBL_Texto.Size.ToString());
+            SemanticResultValue choiceResultValue = new SemanticResultValue("reloj", "hora");
             GrammarBuilder resultValueBuilder = new GrammarBuilder(choiceResultValue);
             Choice.Add(resultValueBuilder);
 
@@ -455,9 +578,9 @@ namespace AppSpeech
             resultValueBuilder = new GrammarBuilder(choiceResultValue);
             Choice.Add(resultValueBuilder);
 
-            choiceResultValue = new SemanticResultValue("Navegador", "Internet");
-            resultValueBuilder = new GrammarBuilder(choiceResultValue);
-            Choice.Add(resultValueBuilder);
+            //choiceResultValue = new SemanticResultValue("Navegador", "Internet");
+            //resultValueBuilder = new GrammarBuilder(choiceResultValue);
+            //Choice.Add(resultValueBuilder);
 
             return Choice;
         }
