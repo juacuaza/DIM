@@ -189,7 +189,7 @@ namespace AppSpeech
                         else if (rawText.ToLower().Contains("cerrar"))
                         {
                             this.LBL_Texto.Text = rawText;
-                            synth.Speak("cerrando navegador");
+                            synth.Speak(rawText);
                             Browser.Visible = false;
                             Update();                            
                         }
